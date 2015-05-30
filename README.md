@@ -3,7 +3,7 @@ Python script for Linux Mint that will change the wallpaper on desktop screen to
 
 ## Requirements
 * Python 3.*
-* wallpaper.p12 present in directory
+* client_secret.json present in directory
 
 ## Installation
 * Run "pip install -r requirements.txt"

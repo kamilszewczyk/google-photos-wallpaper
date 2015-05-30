@@ -57,5 +57,6 @@ docs/_build/
 target/
 
 # Config
-wallpaper.p12
+client_secret.json
+credentials.json
 config.py
