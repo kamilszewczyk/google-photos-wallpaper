@@ -19,6 +19,7 @@ lib64/
 parts/
 sdist/
 var/
+images/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -60,3 +61,4 @@ target/
 client_secret.json
 credentials.json
 config.py
+

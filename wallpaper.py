@@ -1,38 +1,59 @@
 #!/usr/bin/env python3
-import webbrowser
-import os
-import json
-import httplib2
-from io import StringIO
 
-from oauth2client import client
+from picasa import Picasa
+import random
+from os import listdir, remove
+from os.path import isfile, join, dirname, realpath, exists
+from subprocess import Popen, PIPE
 
-picasa_url = "https://picasaweb.google.com/data/feed/api/user/default?v=2.0&kind=photo&max-results=1&imgmax=1440u"
+picasa = Picasa()
 
-if os.path.isfile('credentials.json'):
-    credentials_file = open('credentials.json', 'r')
-    credentials = client.OAuth2Credentials.from_json(json.load(credentials_file))
+refresh_frequency = 60
+max_from_album = 10
+current_dir = dirname(realpath(__file__))
+
+# get list of all images from images directory
+images = [f for f in listdir(current_dir + "/images") if isfile(join(current_dir + "/images", f))]
+if (len(images) > 0):
+    # get random image from retrieved images
+    wallpaper = current_dir + "/images/" + random.choice(images)
+
+    # get current wallpaper uri
+    p = Popen('dbus-launch gsettings get org.cinnamon.desktop.background picture-uri', shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+    output = p.stdout.read()
+
+    # if the file exists in our images directory remove it
+    if exists(current_dir + "/images/" + "".join(output.decode("utf-8").split("/")[-1:]).strip(" \t\n\r'")):
+        remove(current_dir + "/images/" + "".join(output.decode("utf-8").split("/")[-1:]).strip(" \t\n\r'"))
+
+    # set image to be new wallpaper
+    Popen('dbus-launch gsettings set org.cinnamon.desktop.background picture-uri "file://' + wallpaper + '"', shell=True)
+
 else:
-    flow = client.flow_from_clientsecrets('client_secret.json', scope='https://picasaweb.google.com/data/', redirect_uri='urn:ietf:wg:oauth:2.0:oob')
+    num_of_pictures = 3600 / refresh_frequency
+    num_of_drawn = 0
+    drawn = {}
 
-    auth_uri = flow.step1_get_authorize_url()
-    webbrowser.open(auth_uri)
-    auth_code = input('Enter the auth code: ')
-    credentials = flow.step2_exchange(auth_code)
-    credentials_file = open('credentials.json', 'w')
-    json.dump(credentials.to_json(), credentials_file)
+    # draw random number of pictures from random album until we have enough pictures drawn
+    album_list = picasa.get_album_list()
+    while num_of_drawn < num_of_pictures:
+        album = random.choice(album_list)
+        if album["num_photos"] == 0:
+            continue
+        drawn_num = random.randint(1, max_from_album if album["num_photos"] > max_from_album else album["num_photos"])
 
-http = httplib2.Http()
-try:
-    http = credentials.authorize(http)
-    response, album_list = http.request(picasa_url, 'GET')
-    if response['status'] == '403':
-        credentials.refresh(http)
-        response, album_list = http.request(picasa_url, 'GET')
+        if (album["id"] in drawn):
+            drawn[album["id"]] += drawn_num
+        else:
+            drawn[album["id"]] = drawn_num
 
-    album_list = album_list.decode("utf-8")
-    #album_list = StringIO(album_list)
-    print(album_list)
-except Exception as ex:
-    print(ex)
+        num_of_drawn += drawn_num
+
+    # draw previosly set random of pictures from album
+    for album_id in drawn:
+        photos_list = random.sample(picasa.get_photos_list(album_id), drawn[album_id])
+
+        for photo in photos_list:
+            Picasa.get_photo(photo["src"], current_dir + "/images")
 
