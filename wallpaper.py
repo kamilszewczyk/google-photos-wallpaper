@@ -8,7 +8,7 @@ from subprocess import Popen, PIPE
 
 picasa = Picasa()
 
-refresh_frequency = 60
+refresh_frequency = 30
 max_from_album = 10
 current_dir = dirname(realpath(__file__))
 
@@ -19,16 +19,16 @@ if (len(images) > 0):
     wallpaper = current_dir + "/images/" + random.choice(images)
 
     # get current wallpaper uri
-    p = Popen('dbus-launch gsettings get org.cinnamon.desktop.background picture-uri', shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    p = Popen('gsettings get org.cinnamon.desktop.background picture-uri', shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
-    output = p.stdout.read()
+    current_wallpaper = current_dir + "/images/" + "".join(p.stdout.read().decode("utf-8").split("/")[-1:]).strip(" \t\n\r'")
 
     # if the file exists in our images directory remove it
-    if exists(current_dir + "/images/" + "".join(output.decode("utf-8").split("/")[-1:]).strip(" \t\n\r'")):
-        remove(current_dir + "/images/" + "".join(output.decode("utf-8").split("/")[-1:]).strip(" \t\n\r'"))
+    if exists(current_wallpaper):
+        remove(current_wallpaper)
 
     # set image to be new wallpaper
-    Popen('dbus-launch gsettings set org.cinnamon.desktop.background picture-uri "file://' + wallpaper + '"', shell=True)
+    Popen('gsettings set org.cinnamon.desktop.background picture-uri "file://' + wallpaper + '"', shell=True)
 
 else:
     num_of_pictures = 3600 / refresh_frequency
